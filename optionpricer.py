@@ -1,58 +1,51 @@
 
-# OUTIL DE PRICING D'OPTION - NOMENCLATURE
+# OPTION PRICING BASED ON THE BLACK & SCHOLES FORMULA -----------------------
 
-# C = la valeur de l'option Call
-# P = la valeur de l'option Put
-# K = le strike price
-# r = le taux sans risque
-# t = le temps restant jusqu'à la date d'exercice de l'option (en année)
-# N = loi normale centrée réduite N(0,1)
-# o = sigma, volatilité du sous-jacent
-# d = rendement des dividendes
+# Carries out Black-Scholes calculations for European options on stocks, stock indices and currencies
+# ...
+# ...
 
-# FORMULE POUR L'EVALUATION D'UNE OPTION CALL
 
-# C = S*N(d1) - K*exp(-rt)*N(d2)
-# d1 = [ln(S/K) + (r - d + (o**2/2)) * t] / [o * sqrt(t)]
-# d2 = d1 - (o * sqrt(t))
+# The limits of this model --------------------------------------------------
 
-# FORMULE POUR L'EVALUATION D'UNE OPTION PUT
+# ...
+# ...
+# ...
 
-# P = -S*N(-d1) + K*exp(-rt)*N(d2)
-# d1 = [ln(S/K) + (r - d + (o**2/2)) * t] / [o * sqrt(t)]
-# d2 = d1 - (o * sqrt(t))
+# Information to give are the following -------------------------------------
 
 from pymathematics import sqrt, ln, exp
 from scipy import stats
-from cmath import pi
 
-is_Call = True
-s = 45          # cours du sous-jacent
-k = 40          # strike price
-r = 0.03        # risk-free rate
-t = 1           # en fraction d'année
-o = 0.68        # volatilité implicite sous-jacente
-q = 0.05        # taux de dividende
+is_Call = False     # Put = False / Call = True
+s = 45              # Underlying stock price
+k = 40              # Strike price
+r = 0.03            # Risk-free rate
+t = 1               # Expiration (years)
+o = 0.68            # Volatility
+q = 0.05            # Dividend yield
 
-# 1) Input est-ce que c'est un call ou un put (formule différente)
-# 2) Indiquer ce que l'on cherche à calculer (price, vega, teta, gamma, delta etc...)
-# 3) Mettre les informations nécessaire pour le calcul de ces informations
-# 4) Indication du résultat
-# 5) Potentiellement mettre un graphique
+# Additionnal information ----------------------------------------------------
 
-# --> définir toutes les formules de calcul
+# stats.norm.cdf() => Distribution function of the reduced centered normal distribution
+# stats.norm.pdf() => Density function of the reduced centered normal distribution
 
-# stats.norm.cdf() => fonction de répartition de la loi normale centrée réduite
-# stats.norm.pdf() => fonction de densité de la loi normale centrée réduite
 
+# Beginning of the code ------------------------------------------------------
+
+
+# First probability factor (D1)
 def d1(s, k, r, q, o, t):
     d1 = (ln(s / k) + (r - q + (0.5 * (o ** 2))) * t) / (o * sqrt(t))
     return d1
 
+# Second probability factor (D2)
+#
 def d2(d1, o, t):
     d2 = d1 - (o * sqrt(t))
     return d2
 
+# Price of the option
 def price(d1, d2, s, k, r, q, t):
     if is_Call == True:
         cdf_d1 = stats.norm.cdf(d1)
@@ -66,6 +59,7 @@ def price(d1, d2, s, k, r, q, t):
         price = k*exp(-r*t)*cdf_d2-s*exp(-q*t)*cdf_d1
     return round(price,3)
 
+# Delta value
 def delta(d1, q, t):
     cdf_d1 = stats.norm.cdf(d1)
     if is_Call == True:
@@ -74,11 +68,13 @@ def delta(d1, q, t):
         delta = exp(-q*t)*(cdf_d1-1)
     return round(delta, 3)
 
+# Vega value
 def vega(d1, s, q, t):
     pdf_d1 = stats.norm.pdf(d1)/100
     vega = s*exp(-q*t)*pdf_d1*sqrt(t)
     return round(vega,3)
 
+# Rho value
 def rho(d2, k, t, r):
     if is_Call == True:
         cdf_d2 = stats.norm.cdf(d2)/100
@@ -89,20 +85,13 @@ def rho(d2, k, t, r):
         rho = -k*t*exp(-r*t)*cdf_d2
     return round(rho,3)
 
+# Gamma value
 def gamma(d1, q, t, s, o):
     pdf_d1 = stats.norm.pdf(d1)
     gamma = (pdf_d1*exp(-q*t))/(s*o*sqrt(t))
     return round(gamma,3)
 
-def theta(d1, d2, s, o, t, r, k, q):
-    if is_Call == True:
-        pdf_d1 = stats.norm.cdf(d1)/100
-        cdf_d1 = stats.norm.pdf(d1)/100
-        cdf_d2 = stats.norm.pdf(d2)/100
-        theta = -((s*exp(-q*t)*pdf_d1*o)/(2*sqrt(t)))-r*k*exp(-r*t)*cdf_d2+q*s*exp(-q*t)*cdf_d1
-    return theta
-
-
+# Theta value
 def theta(d1, d2, s, k, r, q, o, t):
     if is_Call == True:
         pdf_d1 = stats.norm.pdf(d1)
@@ -122,6 +111,22 @@ def theta(d1, d2, s, k, r, q, o, t):
                  - q * s * exp(-q * t) * cdf_d1)
     return round(theta / 365, 3)
 
+# Vanna value
+def vanna(d1, d2, q, t, o):
+    pdf_d1 = stats.norm.pdf(d1)/100
+    vanna = (-exp(-q*t)*pdf_d1*d2)/o
+    return round(vanna,3)
+
+# Vonna value
+def vonna(d1, d2, s, t, q):
+    pdf_d1 = stats.norm.pdf(d1)/100
+    vonna = (s*sqrt(t)*exp(-q*t)*pdf_d1*d1*d2)/o
+    return round(vonna,3)
+
+# Charm value
+
+# Function execution ---------------------------------------------------------
+
 d1 = d1(s, k, r, q, o, t)
 d2 = d2(d1, o, t)
 
@@ -131,10 +136,9 @@ vega = vega(d1, s, q, t)
 rho = rho(d2, k, t, r)
 gamma = gamma(d1, q, t, s, o)
 theta = theta(d1, d2, s, k, r, q, o, t)
+vanna = vanna(d1, d2, q, t, o)
+vonna = vonna(d1, d2, s, t, q)
 
-print(f"Prix : {price}")
-print(f"Delta : {delta}")
-print(f"Vega : {vega}")
-print(f"Rho : {rho}")
-print(f"Gamma : {gamma}")
-print(f"Theta : {theta}")
+print(f"< Option Pricer & Values >\nPrix : {price}\n< First order values >\nDelta : {delta}\nGamma : {gamma}\n"
+      f"Vega : {vega}\nTheta : {theta}\nRho : {rho}\n< Second order values >\n"
+      f"Vanna : {vanna}\nVonna / Volga : {vonna}")
